@@ -1,33 +1,54 @@
 import io
 import socket
 import struct
-from PIL import Image
+from PIL import Image, ImageTk
 import tkinter as tk
 import time
 import numpy
+import cv2
 
 class main (tk.Tk):
     def __init__ (self, *args, **kwags):
         tk.Tk.__init__(self, *args, **kwags)
         self.estabilsh_connection()
         self.init_image()
+        self.want_disconnect = False
+        self.bind("<Key>", lambda i : self.key_press(i))
+
+    def key_press (self, event=None):
+        key = event.keysym        
+        if key == "b" or key == "B":
+            self.want_disconnect = True
 
     def init_image (self):
-        blank_array = numpy.zeros((640, 480))
-        self.panel = tk.Label(self, image=Image.fromarray(blank_array))
-        self.panel.pack(side="bottom", fill="both", expand="yes")
+        image = Image.fromarray(numpy.zeros((640,480)))
+        image = ImageTk.PhotoImage(image)
+        self.label = tk.Label(self, image=image)
+        self.label.pack(side="bottom", fill="both", expand="yes")
 
     def estabilsh_connection (self):
         self.server_socket = socket.socket()
         self.server_socket.bind(('0.0.0.0', 8000))
+        
+        self.server_disconnect_socket = socket.socket()
+        self.server_disconnect_socket.bind(('0.0.0.0', 8080))
+        
         print("Listening...")
+        
         self.server_socket.listen(0)
         self.connection = self.server_socket.accept()[0].makefile('rb')
+       
+        self.server_disconnect_socket.listen(0)
+        self.server_disconnect_connection, _ = self.server_disconnect_socket.accept()
+        
         print("Connection established!")
+        time.sleep(2)
 
     def close_connection (self):
         self.connection.close()
         self.server_socket.close()
+        self.server_disconnect_socket.close()
+        self.server_disconnect_connection.close()
 
     def re_update (self):
         # Read the length of the image as a 32-bit unsigned int. If the
@@ -44,17 +65,23 @@ class main (tk.Tk):
         # Rewind the stream, open it as an image with PIL and do some
         # processing on it
         image_stream.seek(0)
-        image = Image.open(image_stream)
+        image = Image.open(image_stream).rotate(180)
         
-        # display image
-        self.panel.configure(image=image)
-        self.panel.image = image
-        
+        if self.want_disconnect:
+            self.server_disconnect_connection.send("s".encode())
+            self.close_connection()
+            exit(0)
+        else:
+            self.server_disconnect_connection.send("c".encode())
+
+        # image display
+        image = ImageTk.PhotoImage(image)
+        self.label.configure(image=image)
+        self.label.image = image
 
 root = main(className = "Image")
 while True:
     root.update()
     root.update_idletasks()
     root.re_update()
-    time.sleep(0.09)
     
