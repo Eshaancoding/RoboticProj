@@ -13,12 +13,36 @@ class main (tk.Tk):
         self.estabilsh_connection()
         self.init_image()
         self.want_disconnect = False
-        self.bind("<Key>", lambda i : self.key_press(i))
+        self.bind("<KeyPress>", lambda i : self.key_press(i))
+        self.bind("<KeyRelease>", lambda i : self.key_release(i))
+        self.key_forward = False
+        self.key_backward = False
+        self.key_left = False
+        self.key_right = False
+
+    def key_release (self, event=None):
+        key = event.keysym
+        if key == "w" or key == "W":
+            self.key_forward = False 
+        elif key == "s" or key == "S":
+            self.key_backward = False
+        elif key == "a" or key == "A":
+            self.key_left = False
+        elif key == "d" or key == "D":
+            self.key_right = False
 
     def key_press (self, event=None):
         key = event.keysym        
         if key == "b" or key == "B":
             self.want_disconnect = True
+        elif key == "w" or key == "W":
+            self.key_forward = True 
+        elif key == "s" or key == "S":
+            self.key_backward = True
+        elif key == "a" or key == "A":
+            self.key_left = True
+        elif key == "d" or key == "D":
+            self.key_right = True
 
     def init_image (self):
         image = Image.fromarray(numpy.zeros((640,480)))
@@ -71,6 +95,14 @@ class main (tk.Tk):
             self.server_disconnect_connection.send("s".encode())
             self.close_connection()
             exit(0)
+        elif self.key_forward: 
+            self.server_disconnect_connection.send("f".encode())
+        elif self.key_backward:
+            self.server_disconnect_connection.send("b".encode())
+        elif self.key_left: 
+            self.server_disconnect_connection.send("l".encode())
+        elif self.key_right: 
+            self.server_disconnect_connection.send("r".encode())
         else:
             self.server_disconnect_connection.send("c".encode())
 
